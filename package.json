@@ -1,0 +1,16 @@
+{
+  "name": "quorum",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/worker",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:worker": "cd apps/worker && npm run dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "build:web": "cd apps/web && npm run build",
+    "deploy:worker": "cd apps/worker && npm run deploy",
+    "type-check": "npm run type-check --workspaces"
+  }
+}

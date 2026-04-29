@@ -1,0 +1,44 @@
+name = "quorum-worker"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[[durable_objects.bindings]]
+name = "RAFT_NODE"
+class_name = "RaftNodeDO"
+
+[[durable_objects.bindings]]
+name = "CRDT_REPLICA"
+class_name = "CrdtReplicaDO"
+
+[[durable_objects.bindings]]
+name = "GOSSIP_NODE"
+class_name = "GossipNodeDO"
+
+[[durable_objects.bindings]]
+name = "SIMULATION"
+class_name = "SimulationDO"
+
+[[durable_objects.bindings]]
+name = "OBSERVER"
+class_name = "ObserverDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RaftNodeDO", "CrdtReplicaDO", "GossipNodeDO", "SimulationDO", "ObserverDO"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "quorum-db"
+database_id = "0263f6d5-84ca-4778-a8dd-703e7b2aa7ce"
+
+[[kv_namespaces]]
+binding = "TOPOLOGY"
+id = "feb46f5757444ca18a7bc94629481008"
+
+[dev]
+port = 8787
+local_protocol = "http"
