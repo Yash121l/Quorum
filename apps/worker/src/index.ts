@@ -13,6 +13,7 @@
  *
  *   ALL    /nodes/:nodeId/:algo/:rpc           proxy to algorithm DO
  *   POST   /observer/event                     proxy to ObserverDO (from nodes)
+ *   ALL    /ingest/*                           PostHog reverse proxy
  */
 
 import { Hono } from "hono";
@@ -32,6 +33,7 @@ import { CrdtReplicaDO } from "./algorithms/crdt";
 import { GossipNodeDO } from "./algorithms/gossip";
 import { ObserverDO } from "./observer";
 import { SimulationDO } from "./simulation";
+import { proxyPostHog } from "./posthog-proxy";
 
 export { RaftNodeDO, CrdtReplicaDO, GossipNodeDO, ObserverDO, SimulationDO };
 
@@ -386,6 +388,10 @@ app.post("/observer/event", async (c) => {
     body: JSON.stringify(body),
   });
 });
+
+// ── /ingest/* — PostHog reverse proxy (used when the frontend is served via this worker) ──
+
+app.all("/ingest/*", (c) => proxyPostHog(c.req.raw));
 
 // ── Health ───────────────────────────────────────────────────────────────────
 

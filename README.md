@@ -153,6 +153,14 @@ wrangler pages deploy dist --project-name quorum-web
 
 ---
 
+## Analytics
+
+The frontend sends product analytics to PostHog (`apps/web/src/lib/analytics.ts`). It only runs on production builds served from a real host; set `VITE_POSTHOG_DEV=1` to test locally. The public project key lives in `apps/web/.env.production`.
+
+Events go through a same-origin `/ingest` reverse proxy so ad blockers don't drop them: `apps/web/functions/ingest/[[path]].ts` (Cloudflare Pages Function, deployed automatically by `wrangler pages deploy`), the `/ingest/*` route in the worker, and the Vite dev/preview proxy locally. Session replays mask all inputs.
+
+---
+
 ## Reading the Latency Heatmap
 
 The heatmap shows **average round-trip latency** for messages between each pair of nodes over the last 10 seconds.

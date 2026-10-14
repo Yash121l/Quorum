@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import type { Algorithm, CFRegion } from "../lib/api";
 import { useCreateSimulation } from "../hooks/useSimulation";
+import { track } from "../lib/analytics";
 
 const ALGORITHMS: { id: Algorithm; label: string; description: string }[] = [
   {
@@ -53,9 +54,23 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
+      const startedAt = performance.now();
       const result = await createSimulation(algorithm, nodeCount, regions);
+      track("simulation_created", {
+        algorithm,
+        node_count: nodeCount,
+        region_count: regions.length,
+        regions,
+        create_duration_ms: Math.round(performance.now() - startedAt),
+      });
       navigate(`/simulation/${result.simulationId}`);
     } catch (e) {
+      track("simulation_create_failed", {
+        algorithm,
+        node_count: nodeCount,
+        region_count: regions.length,
+        error: e instanceof Error ? e.message : String(e),
+      });
       setError(e instanceof Error ? e.message : "Failed to start simulation");
     } finally {
       setLoading(false);

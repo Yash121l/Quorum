@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Algorithm, NodeConfig } from "../lib/api";
 import { api } from "../lib/api";
+import { track } from "../lib/analytics";
 
 interface Props {
   simulationId: string;
@@ -26,12 +27,19 @@ export default function ControlPanel({ simulationId, algorithm, nodes }: Props) 
     });
   }
 
-  async function run(label: string, fn: () => Promise<void>) {
+  async function run(
+    label: string,
+    fn: () => Promise<void>,
+    event?: { name: string; properties?: Record<string, unknown> },
+  ) {
     setLoading(label);
     setError(null);
+    const base = { algorithm, node_count: nodes.length, ...event?.properties };
     try {
       await fn();
+      if (event) track(event.name, { ...base, success: true });
     } catch (e) {
+      if (event) track(event.name, { ...base, success: false, error: e instanceof Error ? e.message : String(e) });
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(null);
@@ -65,14 +73,19 @@ export default function ControlPanel({ simulationId, algorithm, nodes }: Props) 
         <div className="flex gap-2 mt-2">
           <button
             disabled={selectedNodes.size === 0 || loading !== null}
-            onClick={() => run("partition", () => api.applyPartition(simulationId, Array.from(selectedNodes)))}
+            onClick={() =>
+              run("partition", () => api.applyPartition(simulationId, Array.from(selectedNodes)), {
+                name: "partition_applied",
+                properties: { isolated_count: selectedNodes.size },
+              })
+            }
             className={`${btn} bg-red-700 hover:bg-red-600 text-white`}
           >
             {loading === "partition" ? "Applying..." : "Partition Selected"}
           </button>
           <button
             disabled={loading !== null}
-            onClick={() => run("heal", () => api.healPartition(simulationId))}
+            onClick={() => run("heal", () => api.healPartition(simulationId), { name: "partition_healed" })}
             className={`${btn} bg-green-700 hover:bg-green-600 text-white`}
           >
             {loading === "heal" ? "Healing..." : "Heal All"}
@@ -132,6 +145,7 @@ export default function ControlPanel({ simulationId, algorithm, nodes }: Props) 
                 algorithm !== "raft" ? injectKey : undefined,
                 algorithm !== "raft" ? injectValue : undefined,
               ),
+              { name: "command_injected" },
             )
           }
           className={`${btn} bg-blue-700 hover:bg-blue-600 text-white`}
@@ -150,7 +164,7 @@ export default function ControlPanel({ simulationId, algorithm, nodes }: Props) 
             <div key={n.nodeId} className="flex gap-1">
               <button
                 disabled={loading !== null}
-                onClick={() => run("stop-" + n.nodeId, () => api.stopNode(simulationId, n.nodeId))}
+                onClick={() => run("stop-" + n.nodeId, () => api.stopNode(simulationId, n.nodeId), { name: "node_crashed", properties: { region: n.region } })}
                 className={`${btn} bg-slate-700 hover:bg-red-800 text-slate-300`}
                 title={`Kill ${n.nodeId}`}
               >
@@ -158,7 +172,7 @@ export default function ControlPanel({ simulationId, algorithm, nodes }: Props) 
               </button>
               <button
                 disabled={loading !== null}
-                onClick={() => run("restart-" + n.nodeId, () => api.restartNode(simulationId, n.nodeId))}
+                onClick={() => run("restart-" + n.nodeId, () => api.restartNode(simulationId, n.nodeId), { name: "node_restarted", properties: { region: n.region } })}
                 className={`${btn} bg-slate-700 hover:bg-green-800 text-slate-300`}
                 title={`Restart ${n.nodeId}`}
               >

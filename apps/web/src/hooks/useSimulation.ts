@@ -10,6 +10,10 @@ import type {
   GossipState,
 } from "../lib/api";
 import { api } from "../lib/api";
+import { track } from "../lib/analytics";
+
+// Simulation id -> creation time, used to report time-to-first-leader once per simulation.
+const simCreatedAt = new Map<string, number>();
 
 export interface MessageArc {
   id: string;
@@ -145,6 +149,17 @@ export function useSimulationWebSocket(simId: string | null) {
       try {
         const event = JSON.parse(e.data as string) as ObserverEvent;
         pushEvent(event);
+        if (event.type === "leader_elected" && simCreatedAt.has(simId)) {
+          const createdAt = simCreatedAt.get(simId) ?? Date.now();
+          simCreatedAt.delete(simId);
+          const { algorithm, nodes } = useSimulationStore.getState();
+          track("first_leader_elected", {
+            algorithm,
+            node_count: nodes.length,
+            term: event.term,
+            ms_since_created: Date.now() - createdAt,
+          });
+        }
       } catch {
         // ignore malformed messages
       }
@@ -166,6 +181,7 @@ export function useCreateSimulation() {
   return async (algorithm: Algorithm, nodeCount: number, regions: CFRegion[]) => {
     const result = await api.createSimulation({ algorithm, nodeCount, regions });
     setSimulation(result.simulationId, result.algorithm, result.nodes);
+    simCreatedAt.set(result.simulationId, Date.now());
     return result;
   };
 }
